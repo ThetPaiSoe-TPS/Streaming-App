@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 import { LOGIN_API_URL } from "../config/api";
-import { setAuthToken } from "../config/notificationService";
+import { setAuthToken, setMerchantId } from "../config/notificationService";
 
 interface LoginResponse {
   success: boolean;
@@ -23,6 +23,13 @@ interface LoginResponse {
     id: string;
     name: string;
     phone: string;
+  };
+  merchantUser?: {
+    id: string;
+    merchant_id: number;
+    district_merchant_id: number;
+    user_id: number;
+    status: string;
   };
 }
 
@@ -96,6 +103,10 @@ export default function LoginScreen() {
         // Save the token for API calls
         if (data.token) {
           setAuthToken(data.token);
+        }
+        // Save merchant ID if available
+        if (data.merchantUser && data.merchantUser.merchant_id) {
+          setMerchantId(data.merchantUser.merchant_id.toString());
         }
         // Navigate to tabs after successful login
         setIsLoggedIn(true);
