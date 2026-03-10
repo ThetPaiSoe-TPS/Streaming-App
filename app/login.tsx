@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -31,6 +31,7 @@ interface LoginResponse {
 }
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -197,6 +198,16 @@ export default function LoginScreen() {
         <TouchableOpacity style={styles.forgotPassword}>
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.registerLink}
+          onPress={() => router.push("/register")}
+        >
+          <Text style={styles.registerLinkText}>
+            Don't have an account?{" "}
+            <Text style={styles.registerLinkBold}>Register</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -284,5 +295,17 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     fontSize: 14,
     fontWeight: "500",
+  },
+  registerLink: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  registerLinkText: {
+    color: "#666",
+    fontSize: 14,
+  },
+  registerLinkBold: {
+    color: "#007AFF",
+    fontWeight: "600",
   },
 });
