@@ -12,12 +12,8 @@ import {
   View,
 } from "react-native";
 
-// Use 10.0.2.2 for Android emulator to reach host machine's localhost
-// Use localhost for web/ios simulator
-const LOGIN_API_URL =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:8000/api/merchant/login"
-    : "http://localhost:8000/api/merchant/login";
+import { LOGIN_API_URL } from "../config/api";
+import { setAuthToken } from "../config/notificationService";
 
 interface LoginResponse {
   success: boolean;
@@ -97,6 +93,10 @@ export default function LoginScreen() {
 
       // Check for success or token presence (backend might return different format)
       if (response.ok && (data.success || data.token)) {
+        // Save the token for API calls
+        if (data.token) {
+          setAuthToken(data.token);
+        }
         // Navigate to tabs after successful login
         setIsLoggedIn(true);
       } else {

@@ -13,12 +13,7 @@ import {
   View,
 } from "react-native";
 
-// Use 10.0.2.2 for Android emulator to reach host machine's localhost
-// Use localhost for web/ios simulator
-const REGISTER_API_URL =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:8000/api/merchant/merchantregister"
-    : "http://localhost:8000/api/merchant/merchantregister";
+import { REGISTER_API_URL } from "../config/api";
 
 interface RegisterResponse {
   success: boolean;

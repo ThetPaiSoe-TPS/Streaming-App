@@ -28,6 +28,10 @@ export default function RootLayout() {
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
         />
+        <Stack.Screen
+          name="notifications"
+          options={{ headerShown: false, title: "Notifications" }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
