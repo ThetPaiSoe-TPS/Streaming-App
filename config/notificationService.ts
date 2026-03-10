@@ -27,14 +27,18 @@ export function getMerchantId(): string | null {
 
 export interface NotificationData {
   id: string;
-  merchant_id: string;
-  title: string;
-  description: string;
-  schedule_at: string | null;
-  status: string;
-  created_by: string;
+  type: string;
+  notifiable_type: string;
+  notifiable_id: number;
+  data: {
+    title: string;
+    message: string;
+    action?: string;
+    district_merchant_id?: number;
+  };
+  read_at: string | null;
   created_at: string;
-  read_at?: string | null;
+  updated_at: string;
 }
 
 export interface NotificationsResponse {

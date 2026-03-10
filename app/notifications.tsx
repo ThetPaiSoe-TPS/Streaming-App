@@ -78,6 +78,26 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleNotificationPress = (notification: NotificationData) => {
+    // Mark as read when opening detail
+    if (!notification.read_at) {
+      handleMarkAsRead(notification.id);
+    }
+
+    // Navigate to detail page
+    router.push({
+      pathname: "/notification-detail",
+      params: {
+        id: notification.id,
+        title: notification.data?.title || "Notification",
+        message: notification.data?.message || "",
+        action: notification.data?.action || "",
+        created_at: notification.created_at,
+        read_at: notification.read_at || "",
+      },
+    });
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -100,6 +120,8 @@ export default function NotificationsScreen() {
 
   const renderNotification = ({ item }: { item: NotificationData }) => {
     const isRead = !!item.read_at;
+    const title = item.data?.title || "Notification";
+    const message = item.data?.message || "";
 
     return (
       <TouchableOpacity
@@ -107,17 +129,23 @@ export default function NotificationsScreen() {
           styles.notificationItem,
           { backgroundColor: isRead ? colors.background : `${colors.tint}10` },
         ]}
-        onPress={() => !isRead && handleMarkAsRead(item.id)}
+        onPress={() => handleNotificationPress(item)}
       >
         <View style={styles.notificationContent}>
           <View style={styles.notificationHeader}>
-            <Text style={[styles.notificationTitle, { color: colors.text }]}>
-              {item.title || "Notification"}
+            <Text
+              style={[styles.notificationTitle, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {title}
             </Text>
             {!isRead && <View style={styles.unreadDot} />}
           </View>
-          <Text style={[styles.notificationMessage, { color: colors.icon }]}>
-            {item.description || ""}
+          <Text
+            style={[styles.notificationMessage, { color: colors.icon }]}
+            numberOfLines={2}
+          >
+            {message}
           </Text>
           <Text style={[styles.notificationDate, { color: colors.icon }]}>
             {formatDate(item.created_at)}

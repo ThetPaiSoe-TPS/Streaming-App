@@ -32,6 +32,10 @@ export default function RootLayout() {
           name="notifications"
           options={{ headerShown: false, title: "Notifications" }}
         />
+        <Stack.Screen
+          name="notification-detail"
+          options={{ headerShown: false, title: "Notification Detail" }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
