@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Image, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -8,11 +8,37 @@ import { HapticTab } from "@/components/haptic-tab";
 import NotificationBell from "@/components/notification/NotificationBell";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { getUserProfile, getMerchantId } from "../../config/notificationService";
+import { useState, useEffect } from "react";
+import { BASE_URL } from "../../config/api";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const merchantId = getMerchantId();
+      const merchantIdNum = merchantId ? parseInt(merchantId) : 1;
+      const data = await getUserProfile(merchantIdNum);
+      if (data && Array.isArray(data)) {
+        const users = data.merchantUser || data;
+        if (Array.isArray(users) && users.length > 0) {
+          setUserProfile(users[0]);
+        }
+      } else if (data && data.merchantUser) {
+        const users = data.merchantUser;
+        if (Array.isArray(users) && users.length > 0) {
+          setUserProfile(users[0]);
+        }
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  return (
 
   return (
     <Tabs
@@ -43,16 +69,21 @@ export default function TabLayout() {
             <Ionicons name="home" size={size} color={color} />
           ),
           headerTitle: "ShopNest Streams",
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.push("/profile")}
-              style={{ marginLeft: 16 }}
-            >
-              <Ionicons name="person-circle" size={32} color="#333" />
-            </TouchableOpacity>
-          ),
           headerRight: () => (
-            <View style={{ marginRight: 16, flexDirection: "row", gap: 12 }}>
+            <View style={{ marginRight: 16, flexDirection: "row", gap: 16, alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => router.push("/profile")}
+                style={{ padding: 4 }}
+              >
+                {userProfile?.profile ? (
+                  <Image
+                    source={{ uri: `${BASE_URL}/${userProfile.profile}` }}
+                    style={{ width: 28, height: 28, borderRadius: 14 }}
+                  />
+                ) : (
+                  <Ionicons name="person-circle" size={28} color="#333" />
+                )}
+              </TouchableOpacity>
               <NotificationBell />
             </View>
           ),

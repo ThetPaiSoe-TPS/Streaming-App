@@ -34,8 +34,18 @@ export default function NotificationBell({
     setIsLoading(true);
     try {
       const response = await getNotifications();
+      console.log(
+        "NotificationBell - Full response:",
+        JSON.stringify(response),
+      );
+      console.log(
+        "NotificationBell - response.data:",
+        JSON.stringify(response?.data),
+      );
       if (response && response.data) {
-        setUnreadCount(getUnreadCount(response.data));
+        const count = getUnreadCount(response.data);
+        console.log("NotificationBell - Unread count:", count);
+        setUnreadCount(count);
       }
     } catch (error) {
       console.error("Error fetching unread count:", error);

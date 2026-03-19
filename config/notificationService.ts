@@ -171,7 +171,13 @@ export async function markAllNotificationsAsRead(): Promise<boolean> {
 
 // Get unread count from notifications
 export function getUnreadCount(notifications: NotificationData[]): number {
-  return notifications.filter((n) => !n.read_at).length;
+  console.log("getUnreadCount - notifications:", JSON.stringify(notifications));
+  if (!notifications || !Array.isArray(notifications)) {
+    return 0;
+  }
+  const count = notifications.filter((n) => !n.read_at).length;
+  console.log("getUnreadCount - count:", count);
+  return count;
 }
 
 // User profile interface
