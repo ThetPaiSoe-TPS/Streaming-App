@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   TouchableOpacity,
   View,
@@ -29,7 +29,9 @@ export default function NotificationBell({
 }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState(false);
   const router = useRouter();
+  const isMounted = useRef(true);
 
   const fetchUnreadCount = useCallback(async () => {
     setIsLoading(true);
@@ -43,40 +45,90 @@ export default function NotificationBell({
         "NotificationBell - response.data:",
         JSON.stringify(response?.data),
       );
-      if (response && response.data) {
-        const count = getUnreadCount(response.data);
+      if (response && response.data && isMounted.current) {
+        const notificationsWithSource = response.data.map((n) => ({
+          ...n,
+          __source: "api" as const,
+        }));
+        const count = getUnreadCount(notificationsWithSource);
         console.log("NotificationBell - Unread count:", count);
         setUnreadCount(count);
       }
     } catch (error) {
       console.error("Error fetching unread count:", error);
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
-  // Handle real-time notification updates
-  const handleNotificationsUpdate = useCallback(
+  // Handle real-time notification updates from Firestore
+  const handleFirestoreNotificationsUpdate = useCallback(
     (notifications: NotificationData[]) => {
       const count = getUnreadCount(notifications);
-      console.log("NotificationBell - Real-time update, unread count:", count);
-      setUnreadCount(count);
+      console.log(
+        "NotificationBell - Firestore real-time update, unread count:",
+        count,
+      );
+      if (isMounted.current) {
+        setUnreadCount(count);
+        setIsFirestoreConnected(true);
+      }
+    },
+    [],
+  );
+
+  // Handle polling-based updates (fallback)
+  const handlePollingNotificationsUpdate = useCallback(
+    (notifications: NotificationData[]) => {
+      const notificationsWithSource = notifications.map((n) => ({
+        ...n,
+        __source: "api" as const,
+      }));
+      const count = getUnreadCount(notificationsWithSource);
+      console.log("NotificationBell - Polling update, unread count:", count);
+      if (isMounted.current) {
+        setUnreadCount(count);
+        setIsFirestoreConnected(false);
+      }
     },
     [],
   );
 
   useEffect(() => {
+    isMounted.current = true;
     let unsubscribe: null | (() => void) = null;
 
     // Prefer Firestore real-time updates when available
-    unsubscribe = subscribeToFirestoreNotifications(handleNotificationsUpdate);
-    if (unsubscribe) {
-      if (isPollingActive()) {
-        stopNotificationPolling();
+    try {
+      unsubscribe = subscribeToFirestoreNotifications(
+        handleFirestoreNotificationsUpdate,
+      );
+      if (unsubscribe) {
+        console.log("NotificationBell - Firestore subscription successful");
+        setIsFirestoreConnected(true);
+        if (isPollingActive()) {
+          stopNotificationPolling();
+        }
+      } else {
+        console.log(
+          "NotificationBell - Firestore subscription not available, using polling fallback",
+        );
+        setIsFirestoreConnected(false);
+        if (!isPollingActive()) {
+          startNotificationPolling(handlePollingNotificationsUpdate, 5000);
+        }
       }
-    } else if (!isPollingActive()) {
-      // Fallback to polling for real-time updates
-      startNotificationPolling(handleNotificationsUpdate, 5000); // Poll every 5 seconds
+    } catch (error) {
+      console.error(
+        "NotificationBell - Error setting up Firestore subscription:",
+        error,
+      );
+      // Fallback to polling
+      if (!isPollingActive()) {
+        startNotificationPolling(handlePollingNotificationsUpdate, 5000);
+      }
     }
 
     // Initial fetch
@@ -84,11 +136,16 @@ export default function NotificationBell({
 
     // Cleanup on unmount
     return () => {
+      isMounted.current = false;
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [fetchUnreadCount, handleNotificationsUpdate]);
+  }, [
+    fetchUnreadCount,
+    handleFirestoreNotificationsUpdate,
+    handlePollingNotificationsUpdate,
+  ]);
 
   const handlePress = () => {
     if (onPress) {

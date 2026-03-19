@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -33,57 +33,153 @@ export default function NotificationsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [firestoreNotifications, setFirestoreNotifications] = useState<
+    NotificationData[]
+  >([]);
+  const [apiNotifications, setApiNotifications] = useState<NotificationData[]>(
+    [],
+  );
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
+  const isMounted = useRef(true);
+
+  // Combine API and Firestore notifications
+  const combineNotifications = useCallback(
+    (
+      api: NotificationData[],
+      firestore: NotificationData[],
+    ): NotificationData[] => {
+      const combined = [...api, ...firestore];
+      // Remove duplicates based on ID
+      const seen = new Set();
+      return combined
+        .filter((notification) => {
+          const duplicate = seen.has(notification.id);
+          seen.add(notification.id);
+          return !duplicate;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+    },
+    [],
+  );
 
   const fetchNotifications = useCallback(async () => {
     try {
       const response = await getNotifications();
-      if (response && response.data) {
-        setNotifications(response.data);
+      if (response && response.data && isMounted.current) {
+        const apiNotifs = response.data.map((n) => ({
+          ...n,
+          __source: "api" as const,
+        }));
+        setApiNotifications(apiNotifs);
+        // Combine with Firestore notifications if available
+        setNotifications(
+          combineNotifications(apiNotifs, firestoreNotifications),
+        );
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
-  }, []);
+  }, [firestoreNotifications, combineNotifications]);
 
-  // Handle real-time notification updates
-  const handleNotificationsUpdate = useCallback((data: NotificationData[]) => {
-    console.log(
-      "Notifications screen - Real-time update received, count:",
-      data.length,
-    );
-    setNotifications(data);
-  }, []);
+  // Handle real-time notification updates from Firestore
+  const handleFirestoreNotificationsUpdate = useCallback(
+    (data: NotificationData[]) => {
+      console.log(
+        "Notifications screen - Firestore real-time update received, count:",
+        data.length,
+      );
+      if (isMounted.current) {
+        setFirestoreNotifications(data);
+        setIsFirestoreConnected(true);
+        // Combine with API notifications
+        setNotifications(combineNotifications(apiNotifications, data));
+      }
+    },
+    [apiNotifications, combineNotifications],
+  );
+
+  // Handle polling-based updates (fallback)
+  const handlePollingNotificationsUpdate = useCallback(
+    (data: NotificationData[]) => {
+      console.log(
+        "Notifications screen - Polling update received, count:",
+        data.length,
+      );
+      if (isMounted.current) {
+        const pollingNotifs = data.map((n) => ({
+          ...n,
+          __source: "api" as const,
+        }));
+        setApiNotifications(pollingNotifs);
+        setNotifications(
+          combineNotifications(pollingNotifs, firestoreNotifications),
+        );
+      }
+    },
+    [firestoreNotifications, combineNotifications],
+  );
 
   useEffect(() => {
+    isMounted.current = true;
     let unsubscribe: null | (() => void) = null;
 
     // Initial fetch
     fetchNotifications();
 
     // Prefer Firestore real-time updates when available
-    unsubscribe = subscribeToFirestoreNotifications(handleNotificationsUpdate);
-    if (unsubscribe) {
-      if (isPollingActive()) {
-        stopNotificationPolling();
+    try {
+      unsubscribe = subscribeToFirestoreNotifications(
+        handleFirestoreNotificationsUpdate,
+      );
+      if (unsubscribe) {
+        console.log("Notifications screen - Firestore subscription successful");
+        setIsFirestoreConnected(true);
+        if (isPollingActive()) {
+          stopNotificationPolling();
+        }
+      } else {
+        console.log(
+          "Notifications screen - Firestore subscription not available, using polling fallback",
+        );
+        setIsFirestoreConnected(false);
+        if (!isPollingActive()) {
+          startNotificationPolling(handlePollingNotificationsUpdate, 5000);
+        }
       }
-    } else if (!isPollingActive()) {
-      // Fallback to polling for real-time updates
-      startNotificationPolling(handleNotificationsUpdate, 5000); // Poll every 5 seconds
+    } catch (error) {
+      console.error(
+        "Notifications screen - Error setting up Firestore subscription:",
+        error,
+      );
+      // Fallback to polling
+      if (!isPollingActive()) {
+        startNotificationPolling(handlePollingNotificationsUpdate, 5000);
+      }
     }
 
     // Cleanup on unmount
     return () => {
+      isMounted.current = false;
       if (unsubscribe) {
         unsubscribe();
       }
     };
-  }, [fetchNotifications, handleNotificationsUpdate]);
+  }, [
+    fetchNotifications,
+    handleFirestoreNotificationsUpdate,
+    handlePollingNotificationsUpdate,
+  ]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -94,6 +190,14 @@ export default function NotificationsScreen() {
     const target = notifications.find((n) => n.id === notificationId);
     if (target?.__source === "firestore") {
       await markFirestoreNotificationAsRead(notificationId);
+      // Update both the main notifications and firestore notifications
+      setFirestoreNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
       setNotifications((prev) =>
         prev.map((n) =>
           n.id === notificationId
@@ -106,6 +210,14 @@ export default function NotificationsScreen() {
 
     const success = await markNotificationAsRead(notificationId);
     if (success) {
+      // Update both the main notifications and api notifications
+      setApiNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
       setNotifications((prev) =>
         prev.map((n) =>
           n.id === notificationId
@@ -117,12 +229,20 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAllAsRead = async () => {
+    const now = new Date().toISOString();
     const firestoreUnread = notifications.filter(
       (n) => n.__source === "firestore" && !n.read_at,
     );
     if (firestoreUnread.length > 0) {
       await Promise.all(
         firestoreUnread.map((n) => markFirestoreNotificationAsRead(n.id)),
+      );
+      // Update firestore notifications
+      setFirestoreNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          read_at: n.read_at || now,
+        })),
       );
     }
 
@@ -134,12 +254,19 @@ export default function NotificationsScreen() {
       if (!success) {
         return;
       }
+      // Update api notifications
+      setApiNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          read_at: n.read_at || now,
+        })),
+      );
     }
 
     setNotifications((prev) =>
       prev.map((n) => ({
         ...n,
-        read_at: n.read_at || new Date().toISOString(),
+        read_at: n.read_at || now,
       })),
     );
   };
@@ -257,6 +384,22 @@ export default function NotificationsScreen() {
             </Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* Connection Status Indicator */}
+      <View
+        style={[styles.statusContainer, { backgroundColor: colors.background }]}
+      >
+        <View style={styles.statusIndicator}>
+          <Ionicons
+            name={isFirestoreConnected ? "cloud-done" : "cloud-offline"}
+            size={14}
+            color={isFirestoreConnected ? "#34C759" : "#FF9500"}
+          />
+          <Text style={[styles.statusText, { color: colors.icon }]}>
+            {isFirestoreConnected ? "Real-time" : "Polling (5s)"}
+          </Text>
+        </View>
       </View>
 
       {/* Filter Tabs */}
@@ -381,6 +524,18 @@ const styles = StyleSheet.create({
   headerButtonText: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  statusContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  statusIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  statusText: {
+    fontSize: 12,
   },
   filterContainer: {
     flexDirection: "row",
