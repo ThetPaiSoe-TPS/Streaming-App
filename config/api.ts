@@ -1,6 +1,6 @@
 // API Configuration
 // Set to true for production server, false for local development
-const USE_PRODUCTION = false;
+const USE_PRODUCTION = true;
 
 const PRODUCTION_BASE_URL = "https://snadmin.enrichinsights.com";
 // Use localhost for web, 10.0.2.2 for Android emulator
@@ -13,6 +13,9 @@ const LOCAL_BASE_URL = isWeb ? "http://localhost:8000" : "http://10.0.2.2:8000";
 export const API_BASE_URL = USE_PRODUCTION
   ? PRODUCTION_BASE_URL
   : LOCAL_BASE_URL;
+
+// Export base URL without /api for image paths
+export const BASE_URL = USE_PRODUCTION ? PRODUCTION_BASE_URL : LOCAL_BASE_URL;
 
 export const LOGIN_API_URL = `${API_BASE_URL}/api/merchant/login`;
 export const REGISTER_API_URL = `${API_BASE_URL}/api/merchant/merchantregister`;

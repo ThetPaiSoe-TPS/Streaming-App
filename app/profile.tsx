@@ -15,6 +15,7 @@ import {
   getUserId,
   getMerchantId,
 } from "../config/notificationService";
+import { BASE_URL } from "../config/api";
 
 // Define the API response structure (new format - array of users)
 interface UserData {
@@ -104,6 +105,8 @@ export default function ProfileScreen() {
         }
 
         console.log("Selected user:", JSON.stringify(selectedUser));
+        console.log("User profile path:", selectedUser.profile);
+        console.log("Full image URL:", `${BASE_URL}/${selectedUser.profile}`);
         setUserData(selectedUser as any);
       } else {
         console.log("No valid users found in response");
@@ -132,27 +135,17 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.placeholder} />
-      </View>
-
       {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
           {user?.profile ? (
             <Image
               source={{
-                uri: `https://snadmin.enrichinsights.com/${user.profile}`,
+                uri: `${BASE_URL}/storage/${user.profile}`,
               }}
               style={styles.avatar}
+              resizeMode="cover"
+              onError={(error) => console.log("Image load error:", error)}
             />
           ) : (
             <View style={styles.avatarPlaceholder}>
@@ -307,6 +300,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  backButtonText: {
+    fontSize: 28,
+    color: "#333",
+    fontWeight: "300",
   },
   headerTitle: {
     fontSize: 18,
