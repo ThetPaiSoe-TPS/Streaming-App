@@ -2,12 +2,14 @@ import {
   BRANCH_NOTIFICATIONS_API_URL,
   BRANCH_NOTIFICATION_MARK_READ_API_URL,
   BRANCH_NOTIFICATION_MARK_ALL_READ_API_URL,
+  API_BASE_URL,
 } from "./api";
 
 // Token and merchant ID storage - using global variable for simplicity
 // In production, use SecureStore or AsyncStorage
 let authToken: string | null = null;
 let merchantId: string | null = null;
+let userId: string | null = null;
 
 export function setAuthToken(token: string | null): void {
   authToken = token;
@@ -23,6 +25,14 @@ export function setMerchantId(id: string | null): void {
 
 export function getMerchantId(): string | null {
   return merchantId;
+}
+
+export function setUserId(id: string | null): void {
+  userId = id;
+}
+
+export function getUserId(): string | null {
+  return userId;
 }
 
 export interface NotificationData {
@@ -162,4 +172,66 @@ export async function markAllNotificationsAsRead(): Promise<boolean> {
 // Get unread count from notifications
 export function getUnreadCount(notifications: NotificationData[]): number {
   return notifications.filter((n) => !n.read_at).length;
+}
+
+// User profile interface
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  username?: string;
+  merchantUser?: {
+    id: number;
+    merchant_id: number;
+    district_merchant_id: number;
+    user_id: number;
+    status: string;
+  };
+}
+
+// Fetch user profile
+export async function getUserProfile(merchantId: number): Promise<any | null> {
+  try {
+    const token = getAuthToken();
+
+    console.log("getUserProfile called with merchantId:", merchantId);
+    console.log("Auth token available:", !!token);
+
+    if (!token) {
+      console.error("No auth token found");
+      return null;
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/merchant/getUsers/${merchantId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    console.log("Profile API response status:", response.status);
+
+    if (response.status === 403) {
+      console.error("Access denied - not authorized to view this profile");
+      return null;
+    }
+
+    if (!response.ok) {
+      console.error("Failed to fetch user profile:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log("Profile API data received:", JSON.stringify(data));
+    return data;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return null;
+  }
 }

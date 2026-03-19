@@ -13,7 +13,11 @@ import {
 } from "react-native";
 
 import { LOGIN_API_URL } from "../config/api";
-import { setAuthToken, setMerchantId } from "../config/notificationService";
+import {
+  setAuthToken,
+  setMerchantId,
+  setUserId,
+} from "../config/notificationService";
 
 interface LoginResponse {
   success: boolean;
@@ -108,6 +112,10 @@ export default function LoginScreen() {
         if (data.merchantUser && data.merchantUser.merchant_id) {
           setMerchantId(data.merchantUser.merchant_id.toString());
         }
+        // Save user ID if available
+        if (data.user && data.user.id) {
+          setUserId(data.user.id.toString());
+        }
         // Navigate to tabs after successful login
         setIsLoggedIn(true);
       } else {
@@ -159,7 +167,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.formContainer}>
-        <Text style={styles.title}>Merchant Login</Text>
+        <Text style={styles.title}>Steaming App Login</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <View style={styles.inputContainer}>
