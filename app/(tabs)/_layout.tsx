@@ -15,13 +15,19 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: "#007AFF",
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopColor: "#e5e5e5",
+          borderTopWidth: 1,
+        },
+        tabBarInactiveTintColor: "#8e8e93",
         headerShown: true,
         headerStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: "#fff",
         },
-        headerTintColor: colors.text,
+        headerTintColor: "#333",
         headerTitleStyle: {
           fontWeight: "600",
         },
@@ -34,7 +40,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
-          headerTitle: "ShopNest",
+          headerTitle: "ShopNest Streams",
           headerRight: () => (
             <View style={{ marginRight: 16 }}>
               <NotificationBell />

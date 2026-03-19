@@ -63,14 +63,10 @@ export default function NotificationBell({
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       {isLoading ? (
-        <ActivityIndicator size="small" color={colors.tint} />
+        <ActivityIndicator size="small" color="#333" />
       ) : (
         <View>
-          <Ionicons
-            name="notifications-outline"
-            size={24}
-            color={colors.text}
-          />
+          <Ionicons name="notifications-outline" size={24} color="#333" />
           {unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>
