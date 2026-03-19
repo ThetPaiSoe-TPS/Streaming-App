@@ -11,9 +11,12 @@ import { useRouter } from "expo-router";
 import {
   getNotifications,
   getUnreadCount,
+  startNotificationPolling,
+  stopNotificationPolling,
+  isPollingActive,
+  NotificationData,
 } from "../../config/notificationService";
-import { Colors } from "../../constants/theme";
-import { useColorScheme } from "../../hooks/use-color-scheme";
+import { subscribeToFirestoreNotifications } from "../../config/firebaseNotificationService";
 
 interface NotificationBellProps {
   onPress?: () => void;
@@ -26,8 +29,6 @@ export default function NotificationBell({
 }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
 
   const fetchUnreadCount = useCallback(async () => {
@@ -54,9 +55,40 @@ export default function NotificationBell({
     }
   }, []);
 
+  // Handle real-time notification updates
+  const handleNotificationsUpdate = useCallback(
+    (notifications: NotificationData[]) => {
+      const count = getUnreadCount(notifications);
+      console.log("NotificationBell - Real-time update, unread count:", count);
+      setUnreadCount(count);
+    },
+    [],
+  );
+
   useEffect(() => {
+    let unsubscribe: null | (() => void) = null;
+
+    // Prefer Firestore real-time updates when available
+    unsubscribe = subscribeToFirestoreNotifications(handleNotificationsUpdate);
+    if (unsubscribe) {
+      if (isPollingActive()) {
+        stopNotificationPolling();
+      }
+    } else if (!isPollingActive()) {
+      // Fallback to polling for real-time updates
+      startNotificationPolling(handleNotificationsUpdate, 5000); // Poll every 5 seconds
+    }
+
+    // Initial fetch
     fetchUnreadCount();
-  }, [fetchUnreadCount, refreshTrigger]);
+
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [fetchUnreadCount, handleNotificationsUpdate]);
 
   const handlePress = () => {
     if (onPress) {

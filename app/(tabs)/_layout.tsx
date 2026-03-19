@@ -84,11 +84,18 @@ export default function TabLayout() {
               >
                 {userProfile?.profile ? (
                   <Image
-                    source={{ uri: `${BASE_URL}/${userProfile.profile}` }}
-                    style={{ width: 28, height: 28, borderRadius: 14 }}
+                    source={{
+                      uri: `${BASE_URL}/storage/${userProfile.profile}`,
+                    }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: "#ddd",
+                    }}
                   />
                 ) : (
-                  <Ionicons name="person-circle" size={28} color="#333" />
+                  <Ionicons name="person-circle" size={32} color="#333" />
                 )}
               </TouchableOpacity>
               <NotificationBell />

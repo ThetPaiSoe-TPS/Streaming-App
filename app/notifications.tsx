@@ -14,8 +14,15 @@ import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  startNotificationPolling,
+  stopNotificationPolling,
+  isPollingActive,
   NotificationData,
 } from "../config/notificationService";
+import {
+  subscribeToFirestoreNotifications,
+  markNotificationAsRead as markFirestoreNotificationAsRead,
+} from "../config/firebaseNotificationService";
 import { Colors } from "../constants/theme";
 import { useColorScheme } from "../hooks/use-color-scheme";
 
@@ -44,9 +51,39 @@ export default function NotificationsScreen() {
     }
   }, []);
 
+  // Handle real-time notification updates
+  const handleNotificationsUpdate = useCallback((data: NotificationData[]) => {
+    console.log(
+      "Notifications screen - Real-time update received, count:",
+      data.length,
+    );
+    setNotifications(data);
+  }, []);
+
   useEffect(() => {
+    let unsubscribe: null | (() => void) = null;
+
+    // Initial fetch
     fetchNotifications();
-  }, [fetchNotifications]);
+
+    // Prefer Firestore real-time updates when available
+    unsubscribe = subscribeToFirestoreNotifications(handleNotificationsUpdate);
+    if (unsubscribe) {
+      if (isPollingActive()) {
+        stopNotificationPolling();
+      }
+    } else if (!isPollingActive()) {
+      // Fallback to polling for real-time updates
+      startNotificationPolling(handleNotificationsUpdate, 5000); // Poll every 5 seconds
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [fetchNotifications, handleNotificationsUpdate]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -54,6 +91,19 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
+    const target = notifications.find((n) => n.id === notificationId);
+    if (target?.__source === "firestore") {
+      await markFirestoreNotificationAsRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
+      return;
+    }
+
     const success = await markNotificationAsRead(notificationId);
     if (success) {
       setNotifications((prev) =>
@@ -67,15 +117,31 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAllAsRead = async () => {
-    const success = await markAllNotificationsAsRead();
-    if (success) {
-      setNotifications((prev) =>
-        prev.map((n) => ({
-          ...n,
-          read_at: n.read_at || new Date().toISOString(),
-        })),
+    const firestoreUnread = notifications.filter(
+      (n) => n.__source === "firestore" && !n.read_at,
+    );
+    if (firestoreUnread.length > 0) {
+      await Promise.all(
+        firestoreUnread.map((n) => markFirestoreNotificationAsRead(n.id)),
       );
     }
+
+    const hasApiNotifications = notifications.some(
+      (n) => n.__source !== "firestore",
+    );
+    if (hasApiNotifications) {
+      const success = await markAllNotificationsAsRead();
+      if (!success) {
+        return;
+      }
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) => ({
+        ...n,
+        read_at: n.read_at || new Date().toISOString(),
+      })),
+    );
   };
 
   const handleNotificationPress = (notification: NotificationData) => {

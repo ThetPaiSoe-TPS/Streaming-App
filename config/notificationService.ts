@@ -49,6 +49,7 @@ export interface NotificationData {
   read_at: string | null;
   created_at: string;
   updated_at: string;
+  __source?: "api" | "firestore";
 }
 
 export interface NotificationsResponse {
@@ -194,6 +195,64 @@ export interface UserProfile {
     user_id: number;
     status: string;
   };
+}
+
+// Polling interval in milliseconds (5 seconds)
+const DEFAULT_POLL_INTERVAL = 5000;
+
+// Callback type for notification updates
+type NotificationCallback = (notifications: NotificationData[]) => void;
+
+// Store for polling interval ID and callback
+let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+let currentCallback: NotificationCallback | null = null;
+
+// Start polling for real-time notifications
+export function startNotificationPolling(
+  callback: NotificationCallback,
+  intervalMs: number = DEFAULT_POLL_INTERVAL,
+): void {
+  // Stop any existing polling
+  stopNotificationPolling();
+
+  // Store callback
+  currentCallback = callback;
+
+  // Initial fetch
+  fetchAndNotify();
+
+  // Set up interval
+  pollingIntervalId = setInterval(fetchAndNotify, intervalMs);
+  console.log("Notification polling started with interval:", intervalMs);
+}
+
+// Stop polling
+export function stopNotificationPolling(): void {
+  if (pollingIntervalId) {
+    clearInterval(pollingIntervalId);
+    pollingIntervalId = null;
+    console.log("Notification polling stopped");
+  }
+  currentCallback = null;
+}
+
+// Fetch notifications and notify callback
+async function fetchAndNotify(): Promise<void> {
+  if (!currentCallback) return;
+
+  try {
+    const response = await getNotifications();
+    if (response && response.data) {
+      currentCallback(response.data);
+    }
+  } catch (error) {
+    console.error("Error in notification polling:", error);
+  }
+}
+
+// Check if polling is active
+export function isPollingActive(): boolean {
+  return pollingIntervalId !== null;
 }
 
 // Fetch user profile
