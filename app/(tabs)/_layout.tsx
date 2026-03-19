@@ -8,7 +8,10 @@ import { HapticTab } from "@/components/haptic-tab";
 import NotificationBell from "@/components/notification/NotificationBell";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getUserProfile, getMerchantId } from "../../config/notificationService";
+import {
+  getUserProfile,
+  getMerchantId,
+} from "../../config/notificationService";
 import { useState, useEffect } from "react";
 import { BASE_URL } from "../../config/api";
 
@@ -22,14 +25,13 @@ export default function TabLayout() {
     const fetchProfile = async () => {
       const merchantId = getMerchantId();
       const merchantIdNum = merchantId ? parseInt(merchantId) : 1;
-      const data = await getUserProfile(merchantIdNum);
-      if (data && Array.isArray(data)) {
-        const users = data.merchantUser || data;
-        if (Array.isArray(users) && users.length > 0) {
-          setUserProfile(users[0]);
+      const data: any = await getUserProfile(merchantIdNum);
+      if (data) {
+        // Handle different response formats
+        let users: any = data;
+        if (data.merchantUser) {
+          users = data.merchantUser;
         }
-      } else if (data && data.merchantUser) {
-        const users = data.merchantUser;
         if (Array.isArray(users) && users.length > 0) {
           setUserProfile(users[0]);
         }
@@ -37,8 +39,6 @@ export default function TabLayout() {
     };
     fetchProfile();
   }, []);
-
-  return (
 
   return (
     <Tabs
@@ -70,7 +70,14 @@ export default function TabLayout() {
           ),
           headerTitle: "ShopNest Streams",
           headerRight: () => (
-            <View style={{ marginRight: 16, flexDirection: "row", gap: 16, alignItems: "center" }}>
+            <View
+              style={{
+                marginRight: 16,
+                flexDirection: "row",
+                gap: 16,
+                alignItems: "center",
+              }}
+            >
               <TouchableOpacity
                 onPress={() => router.push("/profile")}
                 style={{ padding: 4 }}
