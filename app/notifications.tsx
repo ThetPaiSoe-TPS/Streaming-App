@@ -83,7 +83,7 @@ export default function NotificationsScreen() {
         );
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      // Silently handle error - user may not be logged in
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
@@ -95,10 +95,6 @@ export default function NotificationsScreen() {
   // Handle real-time notification updates from Firestore
   const handleFirestoreNotificationsUpdate = useCallback(
     (data: NotificationData[]) => {
-      console.log(
-        "Notifications screen - Firestore real-time update received, count:",
-        data.length,
-      );
       if (isMounted.current) {
         setFirestoreNotifications(data);
         setIsFirestoreConnected(true);
@@ -112,10 +108,6 @@ export default function NotificationsScreen() {
   // Handle polling-based updates (fallback)
   const handlePollingNotificationsUpdate = useCallback(
     (data: NotificationData[]) => {
-      console.log(
-        "Notifications screen - Polling update received, count:",
-        data.length,
-      );
       if (isMounted.current) {
         const pollingNotifs = data.map((n) => ({
           ...n,
@@ -143,25 +135,17 @@ export default function NotificationsScreen() {
         handleFirestoreNotificationsUpdate,
       );
       if (unsubscribe) {
-        console.log("Notifications screen - Firestore subscription successful");
         setIsFirestoreConnected(true);
         if (isPollingActive()) {
           stopNotificationPolling();
         }
       } else {
-        console.log(
-          "Notifications screen - Firestore subscription not available, using polling fallback",
-        );
         setIsFirestoreConnected(false);
         if (!isPollingActive()) {
           startNotificationPolling(handlePollingNotificationsUpdate, 5000);
         }
       }
     } catch (error) {
-      console.error(
-        "Notifications screen - Error setting up Firestore subscription:",
-        error,
-      );
       // Fallback to polling
       if (!isPollingActive()) {
         startNotificationPolling(handlePollingNotificationsUpdate, 5000);
@@ -402,6 +386,41 @@ export default function NotificationsScreen() {
         </View>
       </View>
 
+      {/* Notification Summary */}
+      <View
+        style={[
+          styles.summaryContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.icon }]}>
+            Total
+          </Text>
+          <Text style={[styles.summaryValue, { color: colors.text }]}>
+            {notifications.length}
+          </Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.icon }]}>
+            Unread
+          </Text>
+          <Text style={[styles.summaryValue, { color: "#007AFF" }]}>
+            {unreadCount}
+          </Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: colors.icon }]}>
+            Read
+          </Text>
+          <Text style={[styles.summaryValue, { color: "#34C759" }]}>
+            {readCount}
+          </Text>
+        </View>
+      </View>
+
       {/* Filter Tabs */}
       <View
         style={[styles.filterContainer, { backgroundColor: colors.background }]}
@@ -504,19 +523,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#e5e5e5",
   },
   backButton: {
     padding: 4,
   },
+  backButtonText: {
+    fontSize: 28,
+    color: "#333",
+    fontWeight: "300",
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
+    color: "#333",
     flex: 1,
     marginLeft: 12,
+  },
+  placeholder: {
+    width: 32,
   },
   headerButton: {
     padding: 4,
@@ -536,6 +564,34 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
+  },
+  summaryContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: "#f8f8f8",
+  },
+  summaryItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  summaryDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "#e0e0e0",
   },
   filterContainer: {
     flexDirection: "row",

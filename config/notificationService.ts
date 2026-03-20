@@ -61,20 +61,15 @@ export interface NotificationsResponse {
 
 // Fetch all notifications for a merchant
 export async function getNotifications(): Promise<NotificationsResponse | null> {
+  const token = getAuthToken();
+  const mid = getMerchantId();
+
+  // Return null if not logged in (no token or merchant ID)
+  if (!token || !mid) {
+    return null;
+  }
+
   try {
-    const token = getAuthToken();
-    const mid = getMerchantId();
-
-    if (!token) {
-      console.error("No auth token found");
-      return null;
-    }
-
-    if (!mid) {
-      console.error("No merchant ID found");
-      return null;
-    }
-
     const response = await fetch(BRANCH_NOTIFICATIONS_API_URL(mid), {
       method: "GET",
       headers: {
@@ -85,14 +80,12 @@ export async function getNotifications(): Promise<NotificationsResponse | null> 
     });
 
     if (!response.ok) {
-      console.error("Failed to fetch notifications:", response.status);
       return null;
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching notifications:", error);
     return null;
   }
 }
@@ -172,13 +165,10 @@ export async function markAllNotificationsAsRead(): Promise<boolean> {
 
 // Get unread count from notifications
 export function getUnreadCount(notifications: NotificationData[]): number {
-  console.log("getUnreadCount - notifications:", JSON.stringify(notifications));
   if (!notifications || !Array.isArray(notifications)) {
     return 0;
   }
-  const count = notifications.filter((n) => !n.read_at).length;
-  console.log("getUnreadCount - count:", count);
-  return count;
+  return notifications.filter((n) => !n.read_at).length;
 }
 
 // User profile interface
@@ -223,7 +213,6 @@ export function startNotificationPolling(
 
   // Set up interval
   pollingIntervalId = setInterval(fetchAndNotify, intervalMs);
-  console.log("Notification polling started with interval:", intervalMs);
 }
 
 // Stop polling
@@ -231,7 +220,6 @@ export function stopNotificationPolling(): void {
   if (pollingIntervalId) {
     clearInterval(pollingIntervalId);
     pollingIntervalId = null;
-    console.log("Notification polling stopped");
   }
   currentCallback = null;
 }
@@ -246,7 +234,7 @@ async function fetchAndNotify(): Promise<void> {
       currentCallback(response.data);
     }
   } catch (error) {
-    console.error("Error in notification polling:", error);
+    // Silently handle error
   }
 }
 

@@ -49,7 +49,7 @@ export default function NotificationDetailScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Notification Detail
         </Text>
-        <View style={styles.headerRight} />
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView
@@ -118,21 +118,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#e5e5e5",
   },
   backButton: {
     padding: 4,
   },
+  backButtonText: {
+    fontSize: 28,
+    color: "#333",
+    fontWeight: "300",
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
-    flex: 1,
-    textAlign: "center",
+    color: "#333",
   },
-  headerRight: {
+  placeholder: {
     width: 32,
   },
   content: {

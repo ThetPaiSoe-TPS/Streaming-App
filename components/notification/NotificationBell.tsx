@@ -37,25 +37,16 @@ export default function NotificationBell({
     setIsLoading(true);
     try {
       const response = await getNotifications();
-      console.log(
-        "NotificationBell - Full response:",
-        JSON.stringify(response),
-      );
-      console.log(
-        "NotificationBell - response.data:",
-        JSON.stringify(response?.data),
-      );
       if (response && response.data && isMounted.current) {
         const notificationsWithSource = response.data.map((n) => ({
           ...n,
           __source: "api" as const,
         }));
         const count = getUnreadCount(notificationsWithSource);
-        console.log("NotificationBell - Unread count:", count);
         setUnreadCount(count);
       }
     } catch (error) {
-      console.error("Error fetching unread count:", error);
+      // Silently handle error
     } finally {
       if (isMounted.current) {
         setIsLoading(false);
@@ -67,10 +58,6 @@ export default function NotificationBell({
   const handleFirestoreNotificationsUpdate = useCallback(
     (notifications: NotificationData[]) => {
       const count = getUnreadCount(notifications);
-      console.log(
-        "NotificationBell - Firestore real-time update, unread count:",
-        count,
-      );
       if (isMounted.current) {
         setUnreadCount(count);
         setIsFirestoreConnected(true);
@@ -87,7 +74,6 @@ export default function NotificationBell({
         __source: "api" as const,
       }));
       const count = getUnreadCount(notificationsWithSource);
-      console.log("NotificationBell - Polling update, unread count:", count);
       if (isMounted.current) {
         setUnreadCount(count);
         setIsFirestoreConnected(false);
@@ -106,25 +92,17 @@ export default function NotificationBell({
         handleFirestoreNotificationsUpdate,
       );
       if (unsubscribe) {
-        console.log("NotificationBell - Firestore subscription successful");
         setIsFirestoreConnected(true);
         if (isPollingActive()) {
           stopNotificationPolling();
         }
       } else {
-        console.log(
-          "NotificationBell - Firestore subscription not available, using polling fallback",
-        );
         setIsFirestoreConnected(false);
         if (!isPollingActive()) {
           startNotificationPolling(handlePollingNotificationsUpdate, 5000);
         }
       }
     } catch (error) {
-      console.error(
-        "NotificationBell - Error setting up Firestore subscription:",
-        error,
-      );
       // Fallback to polling
       if (!isPollingActive()) {
         startNotificationPolling(handlePollingNotificationsUpdate, 5000);

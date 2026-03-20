@@ -33,7 +33,9 @@ const normalizeDate = (value) => {
 const normalizeFirestoreNotification = (docSnap) => {
   const data = docSnap.data() || {};
   const createdAt = normalizeDate(data.createdAt || data.created_at);
-  const updatedAt = normalizeDate(data.updatedAt || data.updated_at || createdAt);
+  const updatedAt = normalizeDate(
+    data.updatedAt || data.updated_at || createdAt,
+  );
 
   return {
     id: docSnap.id,
@@ -56,15 +58,20 @@ const normalizeFirestoreNotification = (docSnap) => {
 
 // Listen to real-time notifications from Firestore
 export const subscribeToFirestoreNotifications = (callback) => {
+  // Check if Firestore is initialized
   if (!db) {
-    console.log("Firestore not initialized");
     return null;
   }
 
-  const path = getNotificationsPath();
-  if (!path) {
+  // Check if merchantId and userId are available
+  const merchantId = getMerchantId();
+  const userId = getUserId();
+
+  if (!merchantId || !userId) {
     return null;
   }
+
+  const path = `notifications/merchant_${merchantId}/user_${userId}/items`;
 
   try {
     const notificationsRef = collection(db, path);
@@ -73,18 +80,23 @@ export const subscribeToFirestoreNotifications = (callback) => {
     const q = query(notificationsRef, orderBy("createdAt", "desc"));
 
     // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifications = [];
-      snapshot.forEach((docSnap) => {
-        notifications.push(normalizeFirestoreNotification(docSnap));
-      });
-      console.log("Firestore notifications loaded:", notifications.length);
-      callback(notifications);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const notifications = [];
+        snapshot.forEach((docSnap) => {
+          notifications.push(normalizeFirestoreNotification(docSnap));
+        });
+        callback(notifications);
+      },
+      (error) => {
+        // Handle snapshot error gracefully - just return empty
+        callback([]);
+      },
+    );
 
     return unsubscribe;
   } catch (error) {
-    console.error("Error subscribing to Firestore notifications:", error);
     return null;
   }
 };
