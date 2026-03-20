@@ -59,7 +59,7 @@ export interface NotificationsResponse {
   total: number;
 }
 
-// Fetch all notifications for a merchant
+// Fetch all notifications for a merchant (including all pages)
 export async function getNotifications(): Promise<NotificationsResponse | null> {
   const token = getAuthToken();
   const mid = getMerchantId();
@@ -70,7 +70,9 @@ export async function getNotifications(): Promise<NotificationsResponse | null> 
   }
 
   try {
-    const response = await fetch(BRANCH_NOTIFICATIONS_API_URL(mid), {
+    // Fetch first page to get total pages
+    const firstPageUrl = BRANCH_NOTIFICATIONS_API_URL(mid) + "?page=1";
+    const firstResponse = await fetch(firstPageUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -79,12 +81,52 @@ export async function getNotifications(): Promise<NotificationsResponse | null> 
       },
     });
 
-    if (!response.ok) {
+    if (!firstResponse.ok) {
       return null;
     }
 
-    const data = await response.json();
-    return data;
+    const firstData = await firstResponse.json();
+
+    // If only one page, return directly
+    if (!firstData.last_page || firstData.last_page === 1) {
+      return firstData;
+    }
+
+    // Fetch all remaining pages in parallel
+    const totalPages = firstData.last_page;
+    const pagePromises = [];
+
+    for (let page = 2; page <= totalPages; page++) {
+      pagePromises.push(
+        fetch(BRANCH_NOTIFICATIONS_API_URL(mid) + `?page=${page}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+    }
+
+    const responses = await Promise.all(pagePromises);
+    const allData = await Promise.all(responses.map((r) => r.json()));
+
+    // Combine all notifications from all pages
+    const allNotifications = [...firstData.data];
+    allData.forEach((pageData) => {
+      if (pageData.data && Array.isArray(pageData.data)) {
+        allNotifications.push(...pageData.data);
+      }
+    });
+
+    // Return combined result
+    return {
+      ...firstData,
+      data: allNotifications,
+      current_page: 1,
+      last_page: 1,
+    };
   } catch (error) {
     return null;
   }
