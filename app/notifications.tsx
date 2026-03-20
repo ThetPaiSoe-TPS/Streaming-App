@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getNotifications,
   markNotificationAsRead,
@@ -346,7 +347,9 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -371,7 +374,7 @@ export default function NotificationsScreen() {
       </View>
 
       {/* Connection Status Indicator */}
-      <View
+      {/* <View
         style={[styles.statusContainer, { backgroundColor: colors.background }]}
       >
         <View style={styles.statusIndicator}>
@@ -384,7 +387,7 @@ export default function NotificationsScreen() {
             {isFirestoreConnected ? "Real-time" : "Polling (5s)"}
           </Text>
         </View>
-      </View>
+      </View> */}
 
       {/* Notification Summary */}
       <View
@@ -506,7 +509,7 @@ export default function NotificationsScreen() {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -524,6 +527,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
+    minHeight: 56,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e5e5",

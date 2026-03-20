@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Colors } from "../constants/theme";
 import { useColorScheme } from "../hooks/use-color-scheme";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function NotificationDetailScreen() {
   const router = useRouter();
@@ -37,7 +38,9 @@ export default function NotificationDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -106,7 +109,7 @@ export default function NotificationDetailScreen() {
           {message || "No message available."}
         </Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -119,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
+    minHeight: 56,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e5e5",
